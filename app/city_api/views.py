@@ -26,7 +26,7 @@ controller = CityAppController()
     '/',
     response_model=CitySchema,
     status_code=status.HTTP_201_CREATED)
-def create_city_view(city_payload: CreateCitySchema):
+def create_city_view(city_payload: CreateCitySchema) -> CitySchema:
     """View Logic to Post City Payloads."""
 
     invalid_cities = controller.check_city_uuids_exists(
@@ -50,7 +50,7 @@ def create_city_view(city_payload: CreateCitySchema):
     '/',
     response_model=List[CitySchema],
     status_code=status.HTTP_200_OK)
-def get_city_list_view():
+def get_city_list_view() -> List[CitySchema]:
     """View Logic to retrieve a all cities."""
 
     return controller.perform_retrieve_cities()
@@ -60,7 +60,7 @@ def get_city_list_view():
     '/{city_uuid}/',
     response_model=CitySchemaWithAllyForce,
     status_code=status.HTTP_200_OK)
-def get_city_by_uuid_view(city_uuid: uuid.UUID):
+def get_city_by_uuid_view(city_uuid: uuid.UUID) -> CitySchemaWithAllyForce:
     """View Logic to retrieve a city by UUID."""
 
     if not controller.city_exists(city_uuid):
@@ -75,7 +75,8 @@ def get_city_by_uuid_view(city_uuid: uuid.UUID):
     '/{city_uuid}/',
     response_model=CitySchema,
     status_code=status.HTTP_200_OK)
-def update_city_by_id_view(city_payload: UpdateCitySchema, city_uuid: uuid.UUID):
+def update_city_by_id_view(
+        city_payload: UpdateCitySchema, city_uuid: uuid.UUID) -> CitySchema:
     """View Logic to update a city payload by UUID."""
 
     if not controller.city_exists(city_uuid):
@@ -103,12 +104,10 @@ def update_city_by_id_view(city_payload: UpdateCitySchema, city_uuid: uuid.UUID)
 @router.delete(
     '/{city_uuid}/',
     status_code=status.HTTP_204_NO_CONTENT)
-def perform_delete_city_by_id_view(city_uuid: uuid.UUID):
+def perform_delete_city_by_id_view(city_uuid: uuid.UUID) -> None:
     """View Logic to delete a city by UUID."""
 
     if not controller.city_exists(city_uuid):
         raise NotFoundCityUUIDException(city_uuid=city_uuid)
 
-    result = controller.perform_delete_city_by_id(city_uuid)
-
-    return result
+    return controller.perform_delete_city_by_id(city_uuid)
