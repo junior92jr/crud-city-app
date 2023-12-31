@@ -155,7 +155,7 @@ class CityAppUtils(QueryCompositionMixin):
                     geo_location_longitude
                 ),
                 (
-                    ally_object.geo_location_longitude,
+                    ally_object.geo_location_latitude,
                     ally_object.geo_location_longitude
                 )
             )

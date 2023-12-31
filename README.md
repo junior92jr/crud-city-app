@@ -16,6 +16,122 @@ This API implements the following routes:
 | `/city/<id>`      | DELETE            | DELETE            | delete city by id     |
 | `/city/<id>`      | PUT               | UPDATE            | update city by id     |
 
+
+Creating a City
+
+```bash
+curl -X 'POST' \
+  'http://localhost:1337/city/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "Berlin",
+  "beauty": "Average",
+  "population": 3645000,
+  "geo_location_latitude": 52.531677,
+  "geo_location_longitude": 13.381777
+}'
+```
+
+After Creating other cities without allies we add two allies
+
+```bash
+  curl -X 'POST' \
+  'http://localhost:1337/city/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "Hamburg",
+  "beauty": "Gorgeous",
+  "population": 1841000,
+  "geo_location_latitude": 53.551086,
+  "geo_location_longitude": 9.993682,
+  "allied_cities": ["ba969e34-1976-433c-8601-d157a2c23c5a", "d6b89760-f390-4f34-bee6-3b814d0b8822"]
+}'
+```
+
+Retrieve all cities
+
+```bash
+curl -X 'GET' \
+  'http://localhost:1337/city/' \
+  -H 'accept: application/json'
+
+  [
+    {
+      "city_uuid": "fab86ce5-3ff9-4128-8176-2ed55f2c21a9",
+      "name": "Hamburg",
+      "beauty": "Gorgeous",
+      "population": 1841000,
+      "geo_location_latitude": 53.551086,
+      "geo_location_longitude": 9.993682,
+      "allied_cities": [
+        "ba969e34-1976-433c-8601-d157a2c23c5a",
+        "d6b89760-f390-4f34-bee6-3b814d0b8822"
+      ]
+    },
+    {
+      "city_uuid": "ba969e34-1976-433c-8601-d157a2c23c5a",
+      "name": "Frankfurt am Main",
+      "beauty": "Average",
+      "population": 753056,
+      "geo_location_latitude": 50.110924,
+      "geo_location_longitude": 8.682127,
+      "allied_cities": [
+        "fab86ce5-3ff9-4128-8176-2ed55f2c21a9"
+      ]
+    },
+    {
+      "city_uuid": "d6b89760-f390-4f34-bee6-3b814d0b8822",
+      "name": "Berlin",
+      "beauty": "Average",
+      "population": 3645000,
+      "geo_location_latitude": 52.531677,
+      "geo_location_longitude": 13.381777,
+      "allied_cities": [
+        "fab86ce5-3ff9-4128-8176-2ed55f2c21a9"
+      ]
+    }
+  ]
+```
+
+Restrieve a city by uuid
+
+```bash
+  curl -X 'GET' \
+  'http://localhost:1337/city/fab86ce5-3ff9-4128-8176-2ed55f2c21a9/' \
+  -H 'accept: application/json'
+
+
+  {
+    "city_uuid": "fab86ce5-3ff9-4128-8176-2ed55f2c21a9",
+    "name": "Hamburg",
+    "beauty": "Gorgeous",
+    "population": 1841000,
+    "geo_location_latitude": 53.551086,
+    "geo_location_longitude": 9.993682,
+    "allied_cities": [
+      "ba969e34-1976-433c-8601-d157a2c23c5a",
+      "d6b89760-f390-4f34-bee6-3b814d0b8822"
+    ],
+    "allied_power": 6239056
+  }
+```
+
+Update Allies
+
+```bash
+  curl -X 'PUT' \
+  'http://localhost:1337/city/d6b89760-f390-4f34-bee6-3b814d0b8822/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "allied_cities": [
+    "ba969e34-1976-433c-8601-d157a2c23c5a"
+  ]
+}'
+```
+
 ## Build the API image
 
 To build, test and run this API we'll be using `docker-compose`. As such, the first step
