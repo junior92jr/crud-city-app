@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  web:
+    build:
+      context: ./
+      dockerfile: dockerfiles/app.dockerfile
+    command: uvicorn app.main:app --reload --workers 1 --host ${API_HOST} --port ${DOCKER_PORT}
+    container_name: fastapi-app
+    ports:
+      - ${API_PORT}:${DOCKER_PORT}
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_TEST_URL=${DATABASE_TEST_URL}
+    depends_on:
+      - web-db
+
+  web-db:
+    build:
+      context: ./
+      dockerfile: dockerfiles/db.dockerfile
+    container_name: fastapi-db
+    volumes:
+      - ./${DB_VOLUME_PATH}:/var/lib/postgresql/data
+    expose:
+      - ${PGPORT}
+    environment:
+      - POSTGRES_USER=${PGUSER}
+      - POSTGRES_PASSWORD=${PGPASSWORD}
