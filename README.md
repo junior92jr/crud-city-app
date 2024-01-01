@@ -21,29 +21,35 @@ This API implements the following routes:
 Payloads needs to be valid input data
 
 ```bash
-"Input should be a valid UUID"
+Input should be a valid UUID
 ```
 ```bash
-"Population cannot be a negative value."
+Population cannot be a negative value.
 ```
 
 ```bash
-"City Name cannot be an empty string."
+City Name cannot be an empty string.
 ```
 
 ```bash
-"Latitude needs to be in -90.0 - 90.0 range."
+Latitude needs to be in -90.0 - 90.0 range.
 ```
 
 ```bash
-"Longitude needs to be in -180.0 - 180.0 range."
+Longitude needs to be in -180.0 - 180.0 range.
 ```
 
+```bash
 City UUID in the endpoint must exists.
+```
 
+```bash
 City UUIDs in inside "allied_cities" must exists.
+```
 
-City can have repeated name but coordinates are unique.
+```bash
+City name is not unique but coordinates are.
+```
 
 ## API Examples
 
