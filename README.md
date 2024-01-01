@@ -16,6 +16,36 @@ This API implements the following routes:
 | `/city/<id>`      | DELETE            | DELETE            | delete city by id     |
 | `/city/<id>`      | PUT               | UPDATE            | update city by id     |
 
+## API Validations and Exceptions
+
+Payloads needs to be valid input data
+
+```bash
+"Input should be a valid UUID"
+```
+```bash
+"Population cannot be a negative value."
+```
+
+```bash
+"City Name cannot be an empty string."
+```
+
+```bash
+"Latitude needs to be in -90.0 - 90.0 range."
+```
+
+```bash
+"Longitude needs to be in -180.0 - 180.0 range."
+```
+
+City UUID in the endpoint must exists.
+
+City UUIDs in inside "allied_cities" must exists.
+
+City can have repeated name but coordinates are unique.
+
+## API Examples
 
 Creating a City
 
@@ -132,10 +162,28 @@ Update Allies
 }'
 ```
 
+## Clone the repository
+
+To clone the repository by SHH
+
+```bash
+$ git clone git@github.com:junior92jr/crud-city-app.git
+```
+
+To clone the repository by HTTPS
+
+```bash
+$ git clone https://github.com/junior92jr/crud-city-app.git
+```
+
 ## Build the API image
 
 To build, test and run this API we'll be using `docker-compose`. As such, the first step
 is to build the images defined in the `docker-compose.yml` file.
+
+```bash
+$ cd crud-city-app/
+```
 
 ```bash
 $ docker-compose build
