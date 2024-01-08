@@ -8,7 +8,6 @@ import psycopg2.extras
 
 from app.city_api import utils
 from app.common import constants
-from app.common.utils import calculate_distance
 from app.models.connections import PgDatabase
 from app.models.schemas import (
     CitySchema,
