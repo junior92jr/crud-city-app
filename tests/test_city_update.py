@@ -180,6 +180,21 @@ def test_invalid_uuid_update_city() -> None:
     response_city_c = client.put(
         f"/city/{city_c_uuid}",
         json={
+            "allied_cities": [city_c_uuid]
+        }
+    )
+
+    loaded_response_city_c = response_city_c.json()
+
+    expected_response = (
+        f"UUID {city_c_uuid} in url cannot be used in the request.")
+
+    assert response_city_c.status_code == 400
+    assert expected_response == loaded_response_city_c["detail"]
+
+    response_city_c = client.put(
+        f"/city/{city_c_uuid}",
+        json={
             "allied_cities": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
         }
     )
@@ -190,6 +205,18 @@ def test_invalid_uuid_update_city() -> None:
         "UUID(s) 3fa85f64-5717-4562-b3fc-2c963f66afa6 does not exists.")
 
     assert response_city_c.status_code == 400
+    assert expected_response == loaded_response_city_c["detail"]
+
+    fake_city_uuid = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+    response_city_c = client.put(
+        f"/city/{fake_city_uuid}",
+        json={
+            "population": 233
+        }
+    )
+
+    assert response_city_c.status_code == 404
     assert expected_response == loaded_response_city_c["detail"]
 
 

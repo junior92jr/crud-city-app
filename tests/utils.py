@@ -1,7 +1,5 @@
 import os
 
-import psycopg2
-
 from starlette.testclient import TestClient
 
 from app.main import create_application
@@ -35,7 +33,7 @@ def create_test_tables() -> None:
                 city_uuid uuid NOT NULL,
                 ally_uuid uuid NOT NULL,
                 CONSTRAINT fk_city_uuid
-                    FOREIGN KEY(city_uuid) 
+                    FOREIGN KEY(city_uuid)
                         REFERENCES city(city_uuid)
             );
         """)

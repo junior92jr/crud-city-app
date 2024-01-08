@@ -77,6 +77,15 @@ class CityAppUtils(QueryCompositionMixin):
             c_uuid for c_uuid in city_uuid_list if not self.city_exists(c_uuid)
         ]
 
+    def is_city_in_request(
+            self, city_uuid: uuid.UUID, city_uuid_list: List) -> bool:
+        """Check if main city uuid is passed in the body request."""
+
+        if not city_uuid_list:
+            return False
+
+        return city_uuid in city_uuid_list
+
     def select_allied_cities(self, city_uuid: uuid.UUID) -> List[uuid.UUID]:
         """Select allied cities from the database."""
 
@@ -160,11 +169,11 @@ class CityAppUtils(QueryCompositionMixin):
                 )
             )
 
-            if distance_in_km >= 1000:
-                allied_force = allied_force + (ally_object.population / 2)
+            if 1000 <= distance_in_km < 10000:
+                allied_force += int(ally_object.population / 2)
             elif distance_in_km >= 10000:
-                allied_force = allied_force + (ally_object.population / 4)
+                allied_force += int(ally_object.population / 4)
             else:
-                allied_force = allied_force + ally_object.population
+                allied_force += ally_object.population
 
         return allied_force
