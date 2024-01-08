@@ -10,6 +10,7 @@ from app.city_api.exceptions import (
     InvalidCityUUIDException,
     NotFoundCityUUIDException,
     RepeatedCoordinatesException,
+    SelfCityUUIDException
 )
 from app.models.schemas import (
     CitySchema,
@@ -81,6 +82,9 @@ def update_city_by_id_view(
 
     if not controller.city_exists(city_uuid):
         raise NotFoundCityUUIDException(city_uuid=city_uuid)
+
+    if controller.is_city_in_request(city_uuid, city_payload.allied_cities):
+        raise SelfCityUUIDException(city_uuid=city_uuid)
 
     invalid_cities = controller.check_city_uuids_exists(
         city_payload.allied_cities)
