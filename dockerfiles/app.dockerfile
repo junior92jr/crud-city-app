@@ -1,18 +1,29 @@
-FROM python:3.8.3-slim-buster
+# Specify the Python version for consistency
+ARG VARIANT=3.11
+FROM mcr.microsoft.com/vscode/devcontainers/python:${VARIANT}
 
-WORKDIR /usr/src/app
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
-ENV PYTHONDONTWRITEBYTECODE 1
+# Set the user ID and group ID
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+RUN if [ "$USER_GID" != "1000" ] || [ "$USER_UID" != "1000" ]; then \
+    groupmod --gid $USER_GID vscode && usermod --uid $USER_UID --gid $USER_GID vscode; \
+    fi
 
-ENV PYTHONUNBUFFERED 1
-
+# Install necessary dependencies
 RUN apt-get update && \
-    apt-get -y install netcat gcc && \
-    apt-get -y install libpq-dev gcc && \
-    apt-get clean
+    apt-get install -y --no-install-recommends \
+    netcat-traditional gcc build-essential libpq-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+# Copy and install Python dependencies
+COPY requirements.txt /workspace/requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r /workspace/requirements.txt
 
-COPY . .
+# Set up the workspace
+WORKDIR /workspace
+COPY . /workspace
