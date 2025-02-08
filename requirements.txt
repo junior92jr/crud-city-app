@@ -1,13 +1,18 @@
-fastapi==0.108.0
-uvicorn==0.25.0
-requests==2.24.0
-gunicorn==20.0.4
-psycopg2==2.9.9
-typing==3.7.4.3
-pytest==6.0.1
-pytest-cov==2.10.1
-flake8==3.8.3
-isort==5.4.2
-pytest-xdist==2.1.0
-httpx==0.26.0
-geopy==2.4.1
+# FastAPI and related packages
+fastapi==0.115.3
+uvicorn==0.32.0
+httpx==0.27.2
+
+# Database packages
+asyncpg==0.30.0
+SQLAlchemy==2.0.36
+psycopg2==2.9.10
+
+# Testing and linting
+pytest==8.3.3
+pytest-cov==5.0.0
+pytest-flake8==1.2.2
+coverage==7.6.4
+pydantic_settings==2.7.1
+flake8==5.0.4
+black==23.1.0
