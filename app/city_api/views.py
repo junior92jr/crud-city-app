@@ -12,7 +12,7 @@ from app.city_api.exceptions import (
     RepeatedCoordinatesException,
     SelfCityUUIDException
 )
-from app.models.schemas import (
+from app.models_.schemas import (
     CitySchema,
     CitySchemaWithAllyForce,
     CreateCitySchema,

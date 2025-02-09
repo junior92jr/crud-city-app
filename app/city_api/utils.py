@@ -6,8 +6,8 @@ from typing import List
 from app.common.utils import calculate_distance
 from app.common import constants
 from app.common.queries import QueryCompositionMixin
-from app.models.connections import PgDatabase
-from app.models.schemas import CitySchema
+from app.models_.connections import PgDatabase
+from app.models_.schemas import CitySchema
 
 
 class CityAppUtils(QueryCompositionMixin):

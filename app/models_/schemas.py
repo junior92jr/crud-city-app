@@ -6,7 +6,7 @@ from enum import Enum
 from typing import List, Optional
 
 from app.common import constants
-from app.models.validators import CreateValidations, UpdateValidations
+from app.models_.validators import CreateValidations, UpdateValidations
 
 
 class BeautyChoices(str, Enum):

@@ -3,7 +3,7 @@ import os
 from starlette.testclient import TestClient
 
 from app.main import create_application
-from app.models.connections import PgDatabase
+from app.models_.connections import PgDatabase
 from app.common.constants import CITY_TABLE_NAME, ALLY_TABLE_NAME
 
 

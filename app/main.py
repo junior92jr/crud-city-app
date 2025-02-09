@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.utils.logger import logger_config
 from app.database import create_db_and_tables
+from app.routers import cities
 
 
 logger = logger_config(__name__)
@@ -29,6 +30,8 @@ def create_application() -> FastAPI:
         docs_url="/",
         lifespan=lifespan,
     )
+
+    application.include_router(cities.router, prefix="/api/v1", tags=["Items"])
 
     return application
 
