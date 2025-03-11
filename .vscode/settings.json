@@ -25,7 +25,7 @@
     "source.organizeImports": "always" // Automatically sorts imports
   },
   "editor.rulers": [
-    88
+    120
   ], // Displays a vertical ruler at 88 characters
   "python.analysis.autoImportCompletions": true, // Enables auto-import suggestions
   "python.analysis.typeCheckingMode": "basic", // Enables basic type checking

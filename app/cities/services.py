@@ -10,6 +10,8 @@ from app.cities.schemas import CityCreate, CityInDB, CityUpdate
 
 
 class CityService:
+    """Service class to handle city-related operations."""
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -26,7 +28,7 @@ class CityService:
                     self._insert_allied_cities(city_uuid, ally_uuids)
 
                 return CityInDB(
-                    city_uuid=city_uuid,
+                    city_uuid=UUID(city_uuid),
                     name=city_data.name,
                     beauty=city_data.beauty,
                     population=city_data.population,
@@ -37,21 +39,21 @@ class CityService:
 
         except Exception as e:
             self.db.rollback()
-            raise Exception(f"Transaction failed: {e}")
+            raise DatabaseOperationException(f"Transaction failed: {e}") from e
 
     def _insert_city(self, city_data: CityCreate) -> str:
         """Insert the city into the database and return the generated UUID."""
         result = self.db.execute(
             text(
                 """
-            INSERT INTO city (
-                name, beauty, population, geo_location_latitude, geo_location_longitude
-            ) 
-            VALUES (
-                :name, :beauty, :population, :geo_location_latitude, :geo_location_longitude
-            )
-            RETURNING city_uuid;
-        """
+                INSERT INTO city (
+                    name, beauty, population, geo_location_latitude, geo_location_longitude
+                )
+                VALUES (
+                    :name, :beauty, :population, :geo_location_latitude, :geo_location_longitude
+                )
+                RETURNING city_uuid;
+                """
             ),
             {
                 "name": city_data.name,
@@ -72,32 +74,37 @@ class CityService:
         result = self.db.execute(
             text(
                 """
-            SELECT city_uuid FROM city WHERE city_uuid IN :ally_uuids
-        """
+                    SELECT city_uuid FROM city WHERE city_uuid IN :ally_uuids
+                """
             ),
-            {"ally_uuids": tuple(ally_uuids)},
+            {
+                "ally_uuids": tuple(ally_uuids),
+            },
         )
 
         existing_ally_uuids = {str(row.city_uuid) for row in result.fetchall()}
         missing_allies = set(ally_uuids) - existing_ally_uuids
 
         if missing_allies:
-            raise InvalidAllyException(list(missing_allies))
+            raise InvalidAllyException([UUID(ally) for ally in missing_allies])
 
     def _insert_allied_cities(self, city_uuid: str, ally_uuids: List[str]) -> None:
         """Insert the allied cities into the allied_city table."""
         self.db.execute(
             text(
                 """
-            INSERT INTO allied_city (city_uuid, ally_uuid)
-            SELECT :city_uuid, ally_uuid FROM unnest(:allied_cities) AS ally_uuid
-            UNION ALL
-            INSERT INTO allied_city (city_uuid, ally_uuid)
-            SELECT ally_uuid, :city_uuid FROM unnest(:allied_cities) AS ally_uuid
-            ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
-        """
+                    INSERT INTO allied_city (city_uuid, ally_uuid)
+                    SELECT :city_uuid, ally_uuid FROM unnest(:allied_cities) AS ally_uuid
+                    UNION ALL
+                    INSERT INTO allied_city (city_uuid, ally_uuid)
+                    SELECT ally_uuid, :city_uuid FROM unnest(:allied_cities) AS ally_uuid
+                    ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
+                """
             ),
-            {"city_uuid": city_uuid, "allied_cities": ally_uuids},
+            {
+                "city_uuid": city_uuid,
+                "allied_cities": ally_uuids,
+            },
         )
 
 
