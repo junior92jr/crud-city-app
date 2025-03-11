@@ -1,7 +1,7 @@
-from uuid import UUID
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, List
+from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 

@@ -10,9 +10,9 @@ from app.city_api.exceptions import (
     InvalidCityUUIDException,
     NotFoundCityUUIDException,
     RepeatedCoordinatesException,
-    SelfCityUUIDException
+    SelfCityUUIDException,
 )
-from app.models_.schemas import (
+from app.models.schemas import (
     CitySchema,
     CitySchemaWithAllyForce,
     CreateCitySchema,

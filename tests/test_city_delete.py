@@ -1,9 +1,6 @@
 """Module that implements unittest for Delete actions in the city app."""
 
-from tests.utils import (
-    drop_test_tables,
-    get_testing_client
-)
+from tests.utils import drop_test_tables, get_testing_client
 
 
 def test_create_city_with_allies_city() -> None:

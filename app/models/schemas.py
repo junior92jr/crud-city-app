@@ -4,9 +4,12 @@ import uuid
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import List, Optional
+from uuid import UUID
+
+from pydantic import BaseModel
 
 from app.common import constants
-from app.models_.validators import CreateValidations, UpdateValidations
+from app.models.validators import CreateValidations, UpdateValidations
 
 
 class BeautyChoices(str, Enum):

@@ -2,9 +2,9 @@ import os
 
 from starlette.testclient import TestClient
 
+from app.common.constants import ALLY_TABLE_NAME, CITY_TABLE_NAME
 from app.main import create_application
-from app.models_.connections import PgDatabase
-from app.common.constants import CITY_TABLE_NAME, ALLY_TABLE_NAME
+from app.models.connections import PgDatabase
 
 
 def create_test_tables() -> None:

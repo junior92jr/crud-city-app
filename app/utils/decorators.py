@@ -1,7 +1,8 @@
+from functools import wraps
+from typing import Any, Callable
+
 from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
-from functools import wraps
-from typing import Callable, Any
 
 
 def sqlalchemy_error_handler(func: Callable[..., Any]) -> Callable[..., Any]:

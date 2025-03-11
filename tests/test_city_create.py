@@ -1,9 +1,6 @@
 """Module that implements unittest for Create actions in the city app."""
 
-from tests.utils import (
-    drop_test_tables,
-    get_testing_client
-)
+from tests.utils import drop_test_tables, get_testing_client
 
 
 def test_create_single_city() -> None:

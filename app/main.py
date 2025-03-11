@@ -2,10 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.utils.logger import logger_config
+from app.cities import routers
 from app.database import create_db_and_tables
-from app.routers import cities
-
+from app.utils.logger import logger_config
 
 logger = logger_config(__name__)
 
@@ -31,7 +30,7 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    application.include_router(cities.router, prefix="/api/v1", tags=["Items"])
+    application.include_router(routers.router, prefix="/api/v1", tags=["Items"])
 
     return application
 
