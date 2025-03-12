@@ -27,15 +27,20 @@ class CityService:
 
                     self._insert_allied_cities(city_uuid, ally_uuids)
 
-                return CityInDB(
-                    city_uuid=UUID(city_uuid),
-                    name=city_data.name,
-                    beauty=city_data.beauty,
-                    population=city_data.population,
-                    geo_location_latitude=city_data.geo_location_latitude,
-                    geo_location_longitude=city_data.geo_location_longitude,
-                    allied_cities=city_data.allied_cities or [],
-                )
+                self.db.commit()
+
+            return CityInDB(
+                city_uuid=city_uuid,
+                name=city_data.name,
+                beauty=city_data.beauty,
+                population=city_data.population,
+                geo_location_latitude=city_data.geo_location_latitude,
+                geo_location_longitude=city_data.geo_location_longitude,
+                allied_cities=city_data.allied_cities or [],
+            )
+        except InvalidAllyException as e:
+            self.db.rollback()
+            raise e
 
         except Exception as e:
             self.db.rollback()
@@ -47,10 +52,10 @@ class CityService:
             text(
                 """
                 INSERT INTO city (
-                    name, beauty, population, geo_location_latitude, geo_location_longitude
+                    city_uuid, name, beauty, population, geo_location_latitude, geo_location_longitude
                 )
                 VALUES (
-                    :name, :beauty, :population, :geo_location_latitude, :geo_location_longitude
+                    gen_random_uuid(), :name, :beauty, :population, :geo_location_latitude, :geo_location_longitude
                 )
                 RETURNING city_uuid;
                 """
@@ -89,108 +94,59 @@ class CityService:
             raise InvalidAllyException([UUID(ally) for ally in missing_allies])
 
     def _insert_allied_cities(self, city_uuid: str, ally_uuids: List[str]) -> None:
-        """Insert the allied cities into the allied_city table."""
+        """Bulk insert allied cities to optimize performance."""
+        values = [{"city_uuid": city_uuid, "ally_uuid": ally} for ally in ally_uuids]
+        values += [{"city_uuid": ally, "ally_uuid": city_uuid} for ally in ally_uuids]
+
         self.db.execute(
             text(
                 """
-                    INSERT INTO allied_city (city_uuid, ally_uuid)
-                    SELECT :city_uuid, ally_uuid FROM unnest(:allied_cities) AS ally_uuid
-                    UNION ALL
-                    INSERT INTO allied_city (city_uuid, ally_uuid)
-                    SELECT ally_uuid, :city_uuid FROM unnest(:allied_cities) AS ally_uuid
-                    ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
+                INSERT INTO allied_city (city_uuid, ally_uuid)
+                VALUES (:city_uuid, :ally_uuid)
+                ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
                 """
             ),
-            {
-                "city_uuid": city_uuid,
-                "allied_cities": ally_uuids,
-            },
+            values,
         )
 
-
-def create_city(db: Session, city: CityCreate) -> CityInDB:
-    """Create a new city with optional allied cities, ensuring atomicity."""
-    try:
-        result = db.execute(
-            text(
-                """
-            INSERT INTO city (
-                city_uuid, name, beauty, population, geo_location_latitude, geo_location_longitude
-            ) 
-            VALUES (
-                gen_random_uuid(), :name, :beauty, :population, :geo_location_latitude, :geo_location_longitude
+    def get_cities(self, skip: int = 0, limit: int = 100) -> List[CityInDB]:
+        """Get cities with pagination."""
+        rows = self._fetch_cities_data(skip, limit)
+        return [
+            CityInDB(
+                city_uuid=row.city_uuid,
+                name=row.name,
+                beauty=row.beauty,
+                population=row.population,
+                geo_location_latitude=row.geo_location_latitude,
+                geo_location_longitude=row.geo_location_longitude,
+                allied_cities=row.allied_cities,
             )
-            RETURNING city_uuid;
+            for row in rows
+        ]
+
+    def _fetch_cities_data(self, skip: int, limit: int):
+        """Fetch raw city data from the database."""
+        sql = text(
+            """
+            SELECT 
+                c.city_uuid,
+                c.name,
+                c.beauty,
+                c.population,
+                c.geo_location_latitude,
+                c.geo_location_longitude,
+                COALESCE(array_agg(ac.ally_uuid) FILTER (WHERE ac.ally_uuid IS NOT NULL), '{}') AS allied_cities
+            FROM city c
+            LEFT JOIN allied_city ac ON c.city_uuid = ac.city_uuid
+            GROUP BY c.city_uuid
+            ORDER BY c.name
+            LIMIT :limit OFFSET :skip
         """
-            ),
-            {
-                "name": city.name,
-                "beauty": city.beauty,
-                "population": city.population,
-                "geo_location_latitude": city.geo_location_latitude,
-                "geo_location_longitude": city.geo_location_longitude,
-            },
         )
 
-        created_city_uuid = result.scalar()
-
-        if created_city_uuid is None:
-            raise Exception("Failed to create city or retrieve UUID.")
-
-        # Now check if all allied cities exist in the 'city' table
-        if city.allied_cities:
-            ally_uuids = [str(uuid) for uuid in city.allied_cities]
-
-            # Query the city table to check if all allies exist
-            result = db.execute(
-                text(
-                    """
-                SELECT city_uuid FROM city WHERE city_uuid IN :ally_uuids
-            """
-                ),
-                {"ally_uuids": tuple(ally_uuids)},
-            )
-
-            existing_ally_uuids = {str(row.city_uuid) for row in result.fetchall()}
-            missing_allies = set(ally_uuids) - existing_ally_uuids
-
-            if missing_allies:
-                raise InvalidAllyException(missing_allies)
-
-            # Insert the alliances if all allies are valid
-            db.execute(
-                text(
-                    """
-                INSERT INTO allied_city (city_uuid, ally_uuid)
-                SELECT :city_uuid, ally_uuid FROM unnest(:allied_cities) AS ally_uuid
-                ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
-
-                INSERT INTO allied_city (city_uuid, ally_uuid)
-                SELECT ally_uuid, :city_uuid FROM unnest(:allied_cities) AS ally_uuid
-                ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
-            """
-                ),
-                {"city_uuid": str(created_city_uuid), "allied_cities": ally_uuids},
-            )
-
-        # Return the created city data as response
-        return CityInDB(
-            city_uuid=created_city_uuid,
-            name=city.name,
-            beauty=city.beauty,
-            population=city.population,
-            geo_location_latitude=city.geo_location_latitude,
-            geo_location_longitude=city.geo_location_longitude,
-            allied_cities=city.allied_cities or [],
-        )
-
-    except InvalidAllyException as e:
-        db.rollback()  # Rollback if there is an invalid ally
-        raise e  # Raise the custom exception
-
-    except Exception as e:
-        db.rollback()  # Rollback in case of any other failure
-        raise Exception(f"Transaction failed: {e}")
+        result = self.db.execute(sql, {"limit": limit, "skip": skip})
+        return result.fetchall()
 
 
 def get_cities(db: Session, skip: int = 0, limit: int = 100) -> List[CityInDB]:

@@ -15,7 +15,7 @@ class BeautyChoice(str, PyEnum):
 
 
 class City(Base):
-    __tablename__ = 'city'
+    __tablename__ = "city"
 
     city_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(64), nullable=False)
@@ -28,16 +28,17 @@ class City(Base):
 
 
 class AlliedCity(Base):
-    __tablename__ = 'allied_city'
+    __tablename__ = "allied_city"
 
-    city_uuid = Column(UUID(as_uuid=True), ForeignKey(
-        'city.city_uuid'), primary_key=True)
+    city_uuid = Column(
+        UUID(as_uuid=True), ForeignKey("city.city_uuid"), primary_key=True
+    )
     ally_uuid = Column(UUID(as_uuid=True), primary_key=True)
 
     city = relationship("City", back_populates="allied_cities")
 
     # Explicit Index on city_uuid to improve join performance
     __table_args__ = (
-        Index('idx_alliedcity_city_uuid', 'city_uuid'),
-        Index('idx_alliedcity_ally_uuid', 'ally_uuid'),
+        Index("idx_alliedcity_city_uuid", "city_uuid"),
+        Index("idx_alliedcity_ally_uuid", "ally_uuid"),
     )
