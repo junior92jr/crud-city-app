@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.engine.row import Row
-from sqlalchemy.orm import Session, load_only
+from sqlalchemy.orm import Session
 
 from app.cities.exceptions import (
     CityNotFoundException,
@@ -135,7 +135,7 @@ class CityService:
         """Fetch raw city data from the database."""
         sql = text(
             """
-            SELECT 
+            SELECT
                 c.city_uuid,
                 c.name,
                 c.beauty,
@@ -160,13 +160,13 @@ class CityService:
         result = self.db.execute(
             text(
                 """
-                SELECT 
-                    c.city_uuid, 
-                    c.name, 
-                    c.beauty, 
-                    c.population, 
-                    c.geo_location_latitude, 
-                    c.geo_location_longitude, 
+                SELECT
+                    c.city_uuid,
+                    c.name,
+                    c.beauty,
+                    c.population,
+                    c.geo_location_latitude,
+                    c.geo_location_longitude,
                     COALESCE(array_agg(ac.ally_uuid) FILTER (WHERE ac.ally_uuid IS NOT NULL), '{}') AS allied_cities
                 FROM city c
                 LEFT JOIN allied_city ac ON c.city_uuid = ac.city_uuid
