@@ -34,7 +34,6 @@ The API includes validation checks to ensure data integrity:
 ## Examples of API Usage
 
 **Creating a City:**
-
   ```bash
     curl -X 'POST' \
       'http://localhost:1337/api/v1/cities/' \
@@ -50,7 +49,6 @@ The API includes validation checks to ensure data integrity:
   ```
 
 **Add Allies to a City:**
-
   ```bash
     curl -X 'POST' \
       'http://localhost:1337/api/v1/cities/' \
@@ -64,36 +62,32 @@ The API includes validation checks to ensure data integrity:
       "geo_location_longitude": 9.993682,
       "allied_cities": ["ba969e34-1976-433c-8601-d157a2c23c5a", "d6b89760-f390-4f34-bee6-3b814d0b8822"]
     }'
-
   ```
 
 **Get All Cities:**
-
-```bash
-curl -X 'GET' \
-  'http://localhost:1337/api/v1/cities/' \
-  -H 'accept: application/json'
-```
+  ```bash
+  curl -X 'GET' \
+    'http://localhost:1337/api/v1/cities/' \
+    -H 'accept: application/json'
+  ```
 
 **Get City by UUID:**
-
-```bash
-  curl -X 'GET' \
-  'http://localhost:1337/api/v1/cities/fab86ce5-3ff9-4128-8176-2ed55f2c21a9/' \
-  -H 'accept: application/json'
-```
+  ```bash
+    curl -X 'GET' \
+    'http://localhost:1337/api/v1/cities/fab86ce5-3ff9-4128-8176-2ed55f2c21a9/' \
+    -H 'accept: application/json'
+  ```
 
 **Update Allies for a City:**
-
-```bash
-  curl -X 'PUT' \
-  'http://localhost:1337/api/v1/cities/d6b89760-f390-4f34-bee6-3b814d0b8822/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "allied_cities": ["ba969e34-1976-433c-8601-d157a2c23c5a"]
-}'
-```
+  ```bash
+    curl -X 'PUT' \
+    'http://localhost:1337/api/v1/cities/d6b89760-f390-4f34-bee6-3b814d0b8822/' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{
+    "allied_cities": ["ba969e34-1976-433c-8601-d157a2c23c5a"]
+  }'
+  ```
 
 ## Architecture & Approach
 1. **FastAPI for API**: The API is built using **FastAPI**, a modern web framework for building APIs with Python. FastAPI ensures high performance, automatic validation, and easy integration with Swagger UI for testing the endpoints.
