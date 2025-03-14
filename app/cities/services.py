@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.engine.row import Row
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.cities.exceptions import (
     CityNotFoundException,
@@ -12,6 +12,7 @@ from app.cities.exceptions import (
 )
 from app.cities.models import City
 from app.cities.schemas import CityCreate, CityInDB, CityUpdate
+from app.utils.common import calculate_distance
 
 
 class CityService:
@@ -194,8 +195,8 @@ class CityService:
         """Retrieve a city by its UUID, including its alliances."""
 
         try:
-            return self._fetch_city_by_uuid(city_uuid)
-
+            city = self._fetch_city_by_uuid(city_uuid)
+            return city
         except CityNotFoundException as e:
             raise e from e
         except Exception as e:
@@ -332,3 +333,40 @@ class CityService:
             ),
             {"city_uuid": str(city_uuid)},
         )
+
+    def calculate_allied_force(
+        self,
+        geo_location_latitude: float,
+        geo_location_longitude: float,
+        allied_cities: List[UUID],
+    ) -> int:
+        """Calculates the total allied power by distance in km."""
+        allied_force = 0
+
+        if not allied_cities:
+            return allied_force
+
+        allies = (
+            self.db.query(
+                City.geo_location_latitude,
+                City.geo_location_longitude,
+                City.population,
+            )
+            .filter(City.city_uuid.in_(allied_cities))
+            .all()
+        )
+
+        for ally in allies:
+            distance_in_km = calculate_distance(
+                (geo_location_latitude, geo_location_longitude),
+                (ally.geo_location_latitude, ally.geo_location_longitude),
+            )
+
+            if 1000 <= distance_in_km < 10000:
+                allied_force += int(ally.population / 2)
+            elif distance_in_km >= 10000:
+                allied_force += int(ally.population / 4)
+            else:
+                allied_force += ally.population
+
+        return allied_force

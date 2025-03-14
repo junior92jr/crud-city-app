@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.cities.exceptions import CityNotFoundException, InvalidAllyException
-from app.cities.schemas import CityCreate, CityInDB, CityUpdate
+from app.cities.schemas import CityCreate, CityInDB, CityInDBWithAllyForce, CityUpdate
 from app.cities.services import CityService
 from app.database import get_session
 
@@ -34,12 +34,24 @@ def list_cities(skip: int = 0, limit: int = 100, db: Session = Depends(get_sessi
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/cities/{city_id}", response_model=CityInDB, status_code=200)
+@router.get("/cities/{city_id}", response_model=CityInDBWithAllyForce, status_code=200)
 def read_city(city_id: UUID, db: Session = Depends(get_session)):
     """Read a city."""
     try:
         city_service = CityService(db)
-        return city_service.get_city(city_uuid=city_id)
+        city = city_service.get_city(city_uuid=city_id)
+        calculate_allied_force = (
+            city_service.calculate_allied_force(
+                geo_location_latitude=city.geo_location_latitude,
+                geo_location_longitude=city.geo_location_longitude,
+                allied_cities=city.allied_cities,
+            )
+            + city.population
+        )
+        return CityInDBWithAllyForce(
+            **city.model_dump(), allied_power=calculate_allied_force
+        )
+
     except CityNotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
