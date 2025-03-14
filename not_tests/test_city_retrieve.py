@@ -1,6 +1,6 @@
 """Module that implements unittest for Retrieve actions in the city app."""
 
-from tests.utils import drop_test_tables, get_testing_client
+from not_tests.utils import drop_test_tables, get_testing_client
 
 
 def test_retrieve_single_city() -> None:
@@ -15,8 +15,8 @@ def test_retrieve_single_city() -> None:
             "beauty": "Average",
             "population": 52352,
             "geo_location_latitude": 12.432,
-            "geo_location_longitude": 54.234
-        }
+            "geo_location_longitude": 54.234,
+        },
     )
 
     loaded_response_city_a = response_city_a.json()
@@ -59,8 +59,8 @@ def test_retrieve_single_city_with_allies() -> None:
             "beauty": "Average",
             "population": 1841000,
             "geo_location_latitude": 53.551086,
-            "geo_location_longitude": 9.993682
-        }
+            "geo_location_longitude": 9.993682,
+        },
     )
 
     loaded_response_city_a = response_city_a.json()
@@ -77,8 +77,8 @@ def test_retrieve_single_city_with_allies() -> None:
             "beauty": "Average",
             "population": 6751000,
             "geo_location_latitude": 40.413793,
-            "geo_location_longitude": -3.702895
-        }
+            "geo_location_longitude": -3.702895,
+        },
     )
 
     loaded_response_city_b = response_city_b.json()
@@ -95,8 +95,8 @@ def test_retrieve_single_city_with_allies() -> None:
             "beauty": "Average",
             "population": 959000,
             "geo_location_latitude": -16.408413,
-            "geo_location_longitude": -71.537554
-        }
+            "geo_location_longitude": -71.537554,
+        },
     )
 
     loaded_response_city_c = response_city_c.json()
@@ -113,8 +113,8 @@ def test_retrieve_single_city_with_allies() -> None:
             "population": 753056,
             "geo_location_latitude": 50.110924,
             "geo_location_longitude": 8.682127,
-            "allied_cities": [city_a_uuid, city_b_uuid, city_c_uuid]
-        }
+            "allied_cities": [city_a_uuid, city_b_uuid, city_c_uuid],
+        },
     )
 
     loaded_response_city_d = response_city_d.json()
@@ -143,8 +143,8 @@ def test_retrieve_all_cities() -> None:
             "beauty": "Average",
             "population": 52352,
             "geo_location_latitude": 5.432,
-            "geo_location_longitude": 6.234
-        }
+            "geo_location_longitude": 6.234,
+        },
     )
 
     response_city_b = client.post(
@@ -154,8 +154,8 @@ def test_retrieve_all_cities() -> None:
             "beauty": "Average",
             "population": 52352,
             "geo_location_latitude": 3.432,
-            "geo_location_longitude": 4.234
-        }
+            "geo_location_longitude": 4.234,
+        },
     )
 
     response_city_c = client.post(
@@ -165,8 +165,8 @@ def test_retrieve_all_cities() -> None:
             "beauty": "Average",
             "population": 52352,
             "geo_location_latitude": 1.432,
-            "geo_location_longitude": 2.234
-        }
+            "geo_location_longitude": 2.234,
+        },
     )
 
     assert response_city_a.status_code == 201

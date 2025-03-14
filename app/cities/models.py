@@ -9,12 +9,16 @@ from app.database import Base
 
 
 class BeautyChoice(str, PyEnum):
+    """Enum for city beauty choices."""
+
     Ugly = "Ugly"
     Average = "Average"
     Gorgeous = "Gorgeous"
 
 
 class City(Base):
+    """City model."""
+
     __tablename__ = "city"
 
     city_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -28,6 +32,8 @@ class City(Base):
 
 
 class AlliedCity(Base):
+    """Allied city model."""
+
     __tablename__ = "allied_city"
 
     city_uuid = Column(

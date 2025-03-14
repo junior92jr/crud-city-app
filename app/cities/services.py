@@ -1,10 +1,15 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from uuid import UUID
 
 from sqlalchemy import text
+from sqlalchemy.engine.row import Row
 from sqlalchemy.orm import Session
 
-from app.cities.exceptions import DatabaseOperationException, InvalidAllyException
+from app.cities.exceptions import (
+    CityNotFoundException,
+    DatabaseOperationException,
+    InvalidAllyException,
+)
 from app.cities.models import City
 from app.cities.schemas import CityCreate, CityInDB, CityUpdate
 
@@ -44,7 +49,7 @@ class CityService:
 
         except Exception as e:
             self.db.rollback()
-            raise DatabaseOperationException(f"Transaction failed: {e}") from e
+            raise DatabaseOperationException(f"Unexpected Error: {e}") from e
 
     def _insert_city(self, city_data: CityCreate) -> str:
         """Insert the city into the database and return the generated UUID."""
@@ -79,7 +84,7 @@ class CityService:
         result = self.db.execute(
             text(
                 """
-                    SELECT city_uuid FROM city WHERE city_uuid IN :ally_uuids
+                SELECT city_uuid FROM city WHERE city_uuid IN :ally_uuids
                 """
             ),
             {
@@ -125,7 +130,7 @@ class CityService:
             for row in rows
         ]
 
-    def _fetch_cities_data(self, skip: int, limit: int):
+    def _fetch_cities_data(self, skip: int, limit: int) -> Sequence[Row]:
         """Fetch raw city data from the database."""
         sql = text(
             """
@@ -142,38 +147,40 @@ class CityService:
             GROUP BY c.city_uuid
             ORDER BY c.name
             LIMIT :limit OFFSET :skip
-        """
+            """
         )
 
         result = self.db.execute(sql, {"limit": limit, "skip": skip})
         return result.fetchall()
 
+    def _fetch_city_by_uuid(self, city_uuid: UUID) -> CityInDB:
+        """Fetch a city by its UUID from the database (raw row)."""
 
-def get_cities(db: Session, skip: int = 0, limit: int = 100) -> List[CityInDB]:
-    """Get cities with pagination using a single optimized SQL query."""
-    sql = text(
-        """
-        SELECT 
-            c.city_uuid, 
-            c.name, 
-            c.beauty, 
-            c.population, 
-            c.geo_location_latitude, 
-            c.geo_location_longitude, 
-            COALESCE(array_agg(ac.ally_uuid) FILTER (WHERE ac.ally_uuid IS NOT NULL), '{}') AS allied_cities
-        FROM city c
-        LEFT JOIN allied_city ac ON c.city_uuid = ac.city_uuid
-        GROUP BY c.city_uuid
-        ORDER BY c.name
-        LIMIT :limit OFFSET :skip
-    """
-    )
+        result = self.db.execute(
+            text(
+                """
+                SELECT 
+                    c.city_uuid, 
+                    c.name, 
+                    c.beauty, 
+                    c.population, 
+                    c.geo_location_latitude, 
+                    c.geo_location_longitude, 
+                    COALESCE(array_agg(ac.ally_uuid) FILTER (WHERE ac.ally_uuid IS NOT NULL), '{}') AS allied_cities
+                FROM city c
+                LEFT JOIN allied_city ac ON c.city_uuid = ac.city_uuid
+                WHERE c.city_uuid = :city_uuid
+                GROUP BY c.city_uuid
+                """
+            ),
+            {"city_uuid": str(city_uuid)},
+        )
+        row = result.fetchone()
 
-    result = db.execute(sql, {"limit": limit, "skip": skip})
-    rows = result.fetchall()
+        if not row:
+            raise CityNotFoundException(city_uuid)
 
-    return [
-        CityInDB(
+        return CityInDB(
             city_uuid=row.city_uuid,
             name=row.name,
             beauty=row.beauty,
@@ -182,215 +189,146 @@ def get_cities(db: Session, skip: int = 0, limit: int = 100) -> List[CityInDB]:
             geo_location_longitude=row.geo_location_longitude,
             allied_cities=row.allied_cities,
         )
-        for row in rows
-    ]
 
+    def get_city(self, city_uuid: UUID) -> CityInDB:
+        """Retrieve a city by its UUID, including its alliances."""
 
-def get_city(db: Session, city_uuid: UUID) -> Optional[CityInDB]:
-    """Retrieve a city by its UUID, including its alliances."""
-    sql = text(
-        """
-        SELECT 
-            c.city_uuid, 
-            c.name, 
-            c.beauty, 
-            c.population, 
-            c.geo_location_latitude, 
-            c.geo_location_longitude, 
-            COALESCE(array_agg(ac.ally_uuid) FILTER (WHERE ac.ally_uuid IS NOT NULL), '{}') AS allied_cities
-        FROM city c
-        LEFT JOIN allied_city ac ON c.city_uuid = ac.city_uuid
-        WHERE c.city_uuid = :city_uuid
-        GROUP BY c.city_uuid
-    """
-    )
+        try:
+            return self._fetch_city_by_uuid(city_uuid)
 
-    result = db.execute(sql, {"city_uuid": str(city_uuid)})
-    row = result.fetchone()
+        except CityNotFoundException as e:
+            raise e from e
+        except Exception as e:
+            raise DatabaseOperationException(f"Unexpected Error: {e}") from e
 
-    if not row:
-        return None
+    def update_city(self, city_uuid: str, city_data: CityUpdate) -> CityInDB:
+        """Update a city's details and fully replace its alliances within a transaction."""
+        try:
+            with self.db.begin():
+                existing_city = self._fetch_city_by_uuid(city_uuid)
 
-    return CityInDB(
-        city_uuid=row.city_uuid,
-        name=row.name,
-        beauty=row.beauty,
-        population=row.population,
-        geo_location_latitude=row.geo_location_latitude,
-        geo_location_longitude=row.geo_location_longitude,
-        allied_cities=row.allied_cities,
-    )
+                updated_city = self._update_city_fields(
+                    city_uuid, city_data, existing_city
+                )
 
+                if city_data.allied_cities:
+                    self._replace_city_alliances(city_uuid, city_data.allied_cities)
 
-def update_city(db: Session, city_uuid: UUID, city: CityUpdate) -> CityInDB:
-    """Update a city's details and fully replace its alliances within a transaction."""
-
-    try:
-        with db.begin():  # This starts a transaction
-            # Step 1: Retrieve existing city details
-            existing_city = db.execute(
-                text(
-                    """
-                    SELECT name, beauty, population, geo_location_latitude, geo_location_longitude 
-                    FROM city WHERE city_uuid = :city_uuid
-                """
+            return CityInDB(
+                city_uuid=updated_city.city_uuid,
+                name=updated_city.name,
+                beauty=updated_city.beauty,
+                population=updated_city.population,
+                geo_location_latitude=updated_city.geo_location_latitude,
+                geo_location_longitude=updated_city.geo_location_longitude,
+                allied_cities=(
+                    city_data.allied_cities if city_data.allied_cities else []
                 ),
-                {"city_uuid": str(city_uuid)},
-            ).fetchone()
-
-            if not existing_city:
-                raise Exception(f"City with UUID {city_uuid} does not exist.")
-
-            existing_city_data = dict(
-                zip(
-                    [
-                        "name",
-                        "beauty",
-                        "population",
-                        "geo_location_latitude",
-                        "geo_location_longitude",
-                    ],
-                    existing_city,
-                )
             )
+        except CityNotFoundException as e:
+            raise e
+        except Exception as e:
+            self.db.rollback()
+            raise DatabaseOperationException(f"Database error: {str(e)}") from e
 
-            # Step 2: Update city details
-            sql_query = text(
-                """
-                UPDATE city
-                SET 
-                    name = :name,
-                    beauty = :beauty,
-                    population = :population,
-                    geo_location_latitude = :geo_location_latitude,
-                    geo_location_longitude = :geo_location_longitude
-                WHERE city_uuid = :city_uuid
-                RETURNING city_uuid;
-            """
-            )
+    def _update_city_fields(
+        self, city_uuid: str, city_data: CityUpdate, existing_city: CityInDB
+    ) -> Row:
+        """Update city fields and return the updated city."""
 
-            result = db.execute(
-                sql_query,
-                {
-                    "city_uuid": city_uuid,
-                    "name": (
-                        city.name
-                        if city.name is not None
-                        else existing_city_data["name"]
-                    ),
-                    "beauty": (
-                        city.beauty
-                        if city.beauty is not None
-                        else existing_city_data["beauty"]
-                    ),
-                    "population": (
-                        city.population
-                        if city.population is not None
-                        else existing_city_data["population"]
-                    ),
-                    "geo_location_latitude": (
-                        city.geo_location_latitude
-                        if city.geo_location_latitude is not None
-                        else existing_city_data["geo_location_latitude"]
-                    ),
-                    "geo_location_longitude": (
-                        city.geo_location_longitude
-                        if city.geo_location_longitude is not None
-                        else existing_city_data["geo_location_longitude"]
-                    ),
-                },
-            )
-
-            updated_city_uuid = result.scalar()
-            if updated_city_uuid is None:
-                raise Exception("Failed to update the city.")
-
-            # Step 3: Update alliances if provided
-            if city.allied_cities is not None:
-                db.execute(
-                    text(
-                        """
-                    DELETE FROM allied_city
-                    WHERE city_uuid = :city_uuid OR ally_uuid = :city_uuid;
-                """
-                    ),
-                    {"city_uuid": str(city_uuid)},
-                )
-
-                if city.allied_cities:
-                    db.execute(
-                        text(
-                            """
-                        INSERT INTO allied_city (city_uuid, ally_uuid)
-                        SELECT :city_uuid, ally_uuid::UUID FROM unnest(:allied_cities) AS ally_uuid(ally_uuid)
-                        ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
-                        
-                        INSERT INTO allied_city (city_uuid, ally_uuid)
-                        SELECT ally_uuid::UUID, :city_uuid FROM unnest(:allied_cities) AS ally_uuid(ally_uuid)
-                        ON CONFLICT (city_uuid, ally_uuid) DO NOTHING;
-                    """
-                        ),
-                        {
-                            "city_uuid": str(city_uuid),
-                            "allied_cities": [str(uuid) for uuid in city.allied_cities],
-                        },
-                    )
-
-        # If all statements succeed, commit automatically (with db.begin())
-        return CityInDB(
-            city_uuid=updated_city_uuid,
-            name=city.name if city.name is not None else existing_city_data["name"],
-            beauty=(
-                city.beauty if city.beauty is not None else existing_city_data["beauty"]
+        update_fields = {
+            "name": (
+                city_data.name if city_data.name is not None else existing_city.name
             ),
-            population=(
-                city.population
-                if city.population is not None
-                else existing_city_data["population"]
+            "beauty": (
+                city_data.beauty
+                if city_data.beauty is not None
+                else existing_city.beauty
             ),
-            geo_location_latitude=(
-                city.geo_location_latitude
-                if city.geo_location_latitude is not None
-                else existing_city_data["geo_location_latitude"]
+            "population": (
+                city_data.population
+                if city_data.population is not None
+                else existing_city.population
             ),
-            geo_location_longitude=(
-                city.geo_location_longitude
-                if city.geo_location_longitude is not None
-                else existing_city_data["geo_location_longitude"]
+            "geo_location_latitude": (
+                city_data.geo_location_latitude
+                if city_data.geo_location_latitude is not None
+                else existing_city.geo_location_latitude
             ),
-            allied_cities=city.allied_cities if city.allied_cities is not None else [],
-        )
+            "geo_location_longitude": (
+                city_data.geo_location_longitude
+                if city_data.geo_location_longitude is not None
+                else existing_city.geo_location_longitude
+            ),
+        }
 
-    except Exception as e:
-        db.rollback()  # Ensure rollback in case of any failure
-        raise Exception(f"Database error: {str(e)}")
-
-
-def delete_city(db: Session, city_uuid: UUID) -> Optional[City]:
-    """Delete a city and remove its alliances."""
-    db_city = db.query(City).get(city_uuid)
-
-    if not db_city:
-        return None  # City not found
-
-    try:
-        # Remove the city from all alliances
-        db.execute(
+        result = self.db.execute(
             text(
                 """
-            DELETE FROM allied_city
-            WHERE city_uuid = :city_id OR ally_uuid = :city_id;
-        """
+            UPDATE city
+            SET
+                name = :name,
+                beauty = :beauty,
+                population = :population,
+                geo_location_latitude = :geo_location_latitude,
+                geo_location_longitude = :geo_location_longitude
+            WHERE city_uuid = :city_uuid
+            RETURNING city_uuid, name, beauty, population, geo_location_latitude, geo_location_longitude;
+            """
             ),
-            {"city_id": str(city_uuid)},
+            {"city_uuid": city_uuid, **update_fields},
         )
 
-        # Delete the city itself
-        db.delete(db_city)
+        updated_city = result.fetchone()
+        if not updated_city:
+            raise DatabaseOperationException(f"Failed to update city {city_uuid}.")
 
-        db.commit()  # Commit the transaction
-        return db_city  # Return deleted city info
+        return updated_city
 
-    except Exception as e:
-        db.rollback()  # Rollback in case of an error
-        raise Exception(f"Failed to delete city: {str(e)}")
+    def _replace_city_alliances(
+        self, city_uuid: str, allied_cities: Optional[list[str]]
+    ):
+        """Delete old alliances and insert new ones."""
+        self._delete_alliances(city_uuid)
+
+        if allied_cities:
+            self._insert_allied_cities(city_uuid, allied_cities)
+
+    def _delete_alliances(self, city_uuid: str):
+        """Delete alliances for a given city."""
+        self.db.execute(
+            text(
+                """
+                DELETE FROM allied_city
+                WHERE city_uuid = :city_id OR ally_uuid = :city_id;
+                """
+            ),
+            {"city_id": city_uuid},
+        )
+
+    def delete_city(self, city_uuid: UUID) -> CityInDB:
+        """Delete a city and remove its alliances."""
+
+        try:
+            with self.db.begin():
+                city = self._fetch_city_by_uuid(city_uuid)
+                self._delete_alliances(city_uuid)
+                self._delete_city_record(city_uuid)
+
+            return city
+
+        except Exception as e:
+            self.db.rollback()
+            raise DatabaseOperationException(f"Failed to delete city: {str(e)}") from e
+
+    def _delete_city_record(self, city_uuid: UUID) -> None:
+        """Execute SQL to delete a city from the database."""
+        self.db.execute(
+            text(
+                """
+                DELETE FROM city
+                WHERE city_uuid = :city_uuid;
+                """
+            ),
+            {"city_uuid": str(city_uuid)},
+        )

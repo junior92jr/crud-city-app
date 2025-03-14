@@ -19,6 +19,10 @@ def test_create_single_city(client) -> None:
     # Load the response JSON
     loaded_response_city_a = response_city_a.json()
 
+    print("/////////////////////")
+    print(loaded_response_city_a)
+    print("/////////////////////")
+
     # Assert the status code is 201
     assert response_city_a.status_code == 201
 
